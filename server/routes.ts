@@ -3,14 +3,16 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { z } from "zod";
 
+// دامنه ایمیل - از متغیر محیطی یا پیش‌فرض استفاده می‌شود
+const EMAIL_DOMAIN = process.env.EMAIL_DOMAIN || "ariyabot.ir";
+
 function generateRandomEmail(): string {
   const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
   let username = "";
   for (let i = 0; i < 10; i++) {
     username += chars.charAt(Math.floor(Math.random() * chars.length));
   }
-  // Using a local domain for demo - in production this would be your actual domain
-  return `${username}@tempmail.local`;
+  return `${username}@${EMAIL_DOMAIN}`;
 }
 
 export async function registerRoutes(

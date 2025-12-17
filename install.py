@@ -277,7 +277,14 @@ def setup_pm2(project_dir):
     """تنظیم PM2"""
     os.chdir(project_dir)
     
-    # ایجاد فایل ecosystem
+    # حذف فایل ecosystem قدیمی اگر وجود دارد (برای جلوگیری از تداخل)
+    old_ecosystem = project_dir / "ecosystem.config.js"
+    if old_ecosystem.exists():
+        old_ecosystem.unlink()
+        print_success("حذف فایل ecosystem قدیمی")
+    
+    # ایجاد فایل ecosystem با پسوند .cjs برای جلوگیری از خطای ES module
+    # چون package.json دارای "type": "module" است، باید از .cjs استفاده کنیم
     ecosystem = f"""module.exports = {{
   apps: [{{
     name: 'temp-email',
@@ -296,9 +303,11 @@ def setup_pm2(project_dir):
 }};
 """
     
-    ecosystem_path = project_dir / "ecosystem.config.js"
+    ecosystem_path = project_dir / "ecosystem.config.cjs"
     with open(ecosystem_path, "w") as f:
         f.write(ecosystem)
+    
+    print_success("ایجاد فایل ecosystem.config.cjs")
     
     # شروع با PM2
     run_command("pm2 delete temp-email", "حذف نسخه قبلی PM2", check=False)
@@ -311,6 +320,46 @@ def setup_pm2(project_dir):
     print_success("تنظیم PM2")
     return True
 
+def fix_common_issues(project_dir):
+    """تشخیص و رفع مشکلات رایج"""
+    print_step(0, 0, "بررسی و رفع مشکلات رایج...")
+    
+    # 1. حذف فایل ecosystem.config.js قدیمی (مشکل ES module)
+    old_ecosystem_files = [
+        project_dir / "ecosystem.config.js",
+        Path("/var/www/Email/ecosystem.config.js"),
+        Path("/var/www/temp-email/ecosystem.config.js"),
+    ]
+    
+    for old_file in old_ecosystem_files:
+        if old_file.exists():
+            try:
+                old_file.unlink()
+                print_success(f"حذف فایل مشکل‌ساز: {old_file}")
+            except Exception as e:
+                print_warning(f"نتوانستم {old_file} را حذف کنم: {e}")
+    
+    # 2. متوقف کردن PM2 processes قبلی با خطا
+    run_command("pm2 delete all", "پاکسازی PM2 processes قبلی", check=False)
+    
+    # 3. بررسی و رفع مشکل پورت 5000
+    success, output = run_command("lsof -i :5000", "بررسی پورت 5000", check=False)
+    if success and output.strip():
+        print_warning("پورت 5000 در حال استفاده است، در حال آزاد کردن...")
+        run_command("fuser -k 5000/tcp", "آزاد کردن پورت 5000", check=False)
+    
+    # 4. بررسی و رفع مشکلات npm
+    if (project_dir / "node_modules").exists():
+        # بررسی خرابی node_modules
+        success, _ = run_command(f"cd {project_dir} && npm ls --depth=0", "بررسی سلامت node_modules", check=False)
+        if not success:
+            print_warning("node_modules خراب است، در حال حذف و نصب مجدد...")
+            shutil.rmtree(project_dir / "node_modules", ignore_errors=True)
+            if (project_dir / "package-lock.json").exists():
+                (project_dir / "package-lock.json").unlink()
+    
+    print_success("بررسی مشکلات رایج انجام شد")
+
 def configure_firewall():
     """تنظیم فایروال"""
     # بررسی UFW
@@ -318,6 +367,8 @@ def configure_firewall():
     if success:
         run_command("ufw allow ssh", "اجازه SSH")
         run_command("ufw allow 'Nginx Full'", "اجازه Nginx")
+        run_command("ufw allow 25/tcp", "اجازه SMTP (پورت 25)")
+        run_command("ufw allow 2525/tcp", "اجازه SMTP جایگزین (پورت 2525)")
         run_command("ufw --force enable", "فعال‌سازی UFW")
         print_success("تنظیم فایروال")
     else:
@@ -345,11 +396,139 @@ def print_completion(project_dir, domain):
   sudo apt install certbot python3-certbot-nginx
   sudo certbot --nginx -d {domain}
 
-{Colors.YELLOW}نکته: برای دریافت ایمیل واقعی، باید رکوردهای DNS و MX را تنظیم کنید.{Colors.END}
+{Colors.BOLD}تنظیمات SMTP برای دریافت ایمیل:{Colors.END}
+  - پورت 25 باید باز باشد (SMTP سرور)
+  - رکورد MX باید به mail.{domain} اشاره کند
+  - رکورد A برای mail.{domain} باید به IP سرور اشاره کند
+
+{Colors.YELLOW}نکته: SMTP سرور روی پورت 25 اجرا می‌شود.
+اگر پورت 25 بسته است، از پورت 2525 استفاده می‌شود.{Colors.END}
+""")
+
+def print_update_completion(project_dir):
+    """نمایش پیام پایان به‌روزرسانی"""
+    print(f"""
+{Colors.GREEN}{Colors.BOLD}
+╔══════════════════════════════════════════════════════════════╗
+║               به‌روزرسانی با موفقیت انجام شد!                ║
+║                    Update Complete!                          ║
+╚══════════════════════════════════════════════════════════════╝
+{Colors.END}
+
+{Colors.BOLD}مسیر پروژه:{Colors.END} {project_dir}
+
+{Colors.BOLD}وضعیت:{Colors.END}
+  - کد جدید دریافت شد
+  - وابستگی‌ها به‌روز شدند
+  - پروژه دوباره ساخته شد
+  - برنامه ریستارت شد
+""")
+
+def update_project(project_dir):
+    """به‌روزرسانی پروژه از Git"""
+    print(f"""
+{Colors.BLUE}{Colors.BOLD}
+╔══════════════════════════════════════════════════════════════╗
+║              به‌روزرسانی برنامه ایمیل موقت                   ║
+║            Temporary Email Updater                           ║
+╚══════════════════════════════════════════════════════════════╝
+{Colors.END}
+""")
+    
+    project_path = Path(project_dir)
+    
+    if not project_path.exists():
+        print_error(f"مسیر {project_dir} وجود ندارد!")
+        print(f"ابتدا نصب کامل را انجام دهید:")
+        print(f"  sudo python3 install.py {project_dir} yourdomain.com")
+        sys.exit(1)
+    
+    os.chdir(project_path)
+    total_steps = 6
+    
+    print(f"{Colors.BOLD}مسیر پروژه:{Colors.END} {project_dir}")
+    print()
+    
+    # 1. دریافت تغییرات از Git
+    print_step(1, total_steps, "دریافت تغییرات از Git...")
+    success, output = run_command("git fetch origin", "دریافت اطلاعات از مخزن", check=False)
+    if success:
+        success, output = run_command("git pull origin main", "دریافت کد جدید", check=False)
+        if not success:
+            # شاید branch اصلی master باشد
+            run_command("git pull origin master", "دریافت کد جدید (master)", check=False)
+    
+    # 2. رفع مشکلات رایج
+    print_step(2, total_steps, "بررسی و رفع مشکلات...")
+    fix_common_issues(project_path)
+    
+    # 3. نصب وابستگی‌های جدید
+    print_step(3, total_steps, "به‌روزرسانی وابستگی‌ها...")
+    run_command("npm install", "نصب وابستگی‌های npm")
+    
+    # 4. ساخت مجدد پروژه
+    print_step(4, total_steps, "ساخت مجدد پروژه...")
+    run_command("npm run build", "ساخت پروژه")
+    
+    # 5. ریستارت PM2
+    print_step(5, total_steps, "ریستارت برنامه...")
+    success, _ = run_command("pm2 restart temp-email", "ریستارت PM2", check=False)
+    if not success:
+        # اگر process وجود نداشت، شروع کن
+        ecosystem_path = project_path / "ecosystem.config.cjs"
+        if ecosystem_path.exists():
+            run_command(f"pm2 start {ecosystem_path}", "شروع برنامه با PM2")
+        else:
+            setup_pm2(project_path)
+    
+    # 6. بررسی وضعیت
+    print_step(6, total_steps, "بررسی وضعیت...")
+    run_command("pm2 status", "وضعیت PM2")
+    
+    print_update_completion(project_dir)
+
+def print_usage():
+    """نمایش راهنمای استفاده"""
+    print(f"""
+{Colors.BOLD}راهنمای استفاده:{Colors.END}
+
+{Colors.BLUE}نصب کامل:{Colors.END}
+  sudo python3 install.py [مسیر] [دامنه]
+  sudo python3 install.py /var/www/Email ariyabot.ir
+
+{Colors.BLUE}به‌روزرسانی:{Colors.END}
+  sudo python3 install.py update [مسیر]
+  sudo python3 install.py update /var/www/Email
+
+{Colors.BLUE}پارامترها:{Colors.END}
+  مسیر   - مسیر نصب پروژه (پیش‌فرض: /var/www/temp-email)
+  دامنه  - دامنه وب‌سایت (پیش‌فرض: localhost)
+  update - حالت به‌روزرسانی (فقط تغییرات را اعمال می‌کند)
+
+{Colors.BLUE}مثال‌ها:{Colors.END}
+  sudo python3 install.py                           # نصب با تنظیمات پیش‌فرض
+  sudo python3 install.py /var/www/Email            # نصب در مسیر مشخص
+  sudo python3 install.py /var/www/Email ariyabot.ir # نصب کامل
+  sudo python3 install.py update                    # به‌روزرسانی مسیر پیش‌فرض
+  sudo python3 install.py update /var/www/Email    # به‌روزرسانی مسیر مشخص
 """)
 
 def main():
     """تابع اصلی"""
+    
+    # بررسی پارامترهای خط فرمان
+    if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h", "help"]:
+        print_usage()
+        sys.exit(0)
+    
+    # حالت به‌روزرسانی
+    if len(sys.argv) > 1 and sys.argv[1] == "update":
+        check_root()
+        install_dir = sys.argv[2] if len(sys.argv) > 2 else "/var/www/temp-email"
+        update_project(install_dir)
+        sys.exit(0)
+    
+    # حالت نصب کامل
     print_header()
     
     # تنظیمات پیش‌فرض
@@ -362,7 +541,7 @@ def main():
     if len(sys.argv) > 2:
         domain = sys.argv[2]
     
-    total_steps = 12
+    total_steps = 13
     
     print(f"{Colors.BOLD}مسیر نصب:{Colors.END} {install_dir}")
     print(f"{Colors.BOLD}دامنه:{Colors.END} {domain}")
@@ -399,24 +578,28 @@ def main():
     print_step(7, total_steps, "کپی فایل‌های پروژه...")
     project_dir = setup_project(install_dir)
     
+    # رفع مشکلات رایج قبل از نصب
+    print_step(8, total_steps, "بررسی و رفع مشکلات رایج...")
+    fix_common_issues(project_dir)
+    
     # نصب npm
-    print_step(8, total_steps, "نصب وابستگی‌های npm...")
+    print_step(9, total_steps, "نصب وابستگی‌های npm...")
     install_npm_dependencies(project_dir)
     
     # ساخت پروژه
-    print_step(9, total_steps, "ساخت پروژه...")
+    print_step(10, total_steps, "ساخت پروژه...")
     build_project(project_dir)
     
     # ایجاد .env
-    print_step(10, total_steps, "ایجاد فایل تنظیمات...")
+    print_step(11, total_steps, "ایجاد فایل تنظیمات...")
     create_env_file(project_dir)
     
     # تنظیم Nginx
-    print_step(11, total_steps, "تنظیم Nginx...")
+    print_step(12, total_steps, "تنظیم Nginx...")
     configure_nginx(project_dir, domain)
     
     # تنظیم PM2
-    print_step(12, total_steps, "راه‌اندازی برنامه...")
+    print_step(13, total_steps, "راه‌اندازی برنامه...")
     setup_pm2(project_dir)
     
     # تنظیم فایروال

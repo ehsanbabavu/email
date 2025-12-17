@@ -2,6 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
+import { startSmtpServer } from "./smtp";
 
 const app = express();
 const httpServer = createServer(app);
@@ -93,6 +94,17 @@ app.use((req, res, next) => {
     },
     () => {
       log(`serving on port ${port}`);
+      
+      // شروع SMTP سرور فقط در محیط production
+      if (process.env.NODE_ENV === "production") {
+        try {
+          startSmtpServer();
+        } catch (err) {
+          log(`خطا در شروع SMTP سرور: ${err}`, "smtp");
+        }
+      } else {
+        log("SMTP سرور در محیط development غیرفعال است", "smtp");
+      }
     },
   );
 })();
