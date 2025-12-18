@@ -5,7 +5,6 @@ import { EmailHeader } from "@/components/email-header";
 import { InboxList } from "@/components/inbox-list";
 import { EmailPreview } from "@/components/email-preview";
 import { EmptyInbox } from "@/components/empty-inbox";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   HeaderSkeleton,
   EmailListSkeleton,
@@ -91,6 +90,28 @@ export default function Home() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Auto-generate new email when current one expires
+  useEffect(() => {
+    if (!expiresAt) return;
+
+    const checkExpiry = () => {
+      const now = new Date().getTime();
+      const expiry = new Date(expiresAt).getTime();
+      
+      if (now >= expiry) {
+        setSelectedEmail(null);
+        generateMutation.mutate();
+      }
+    };
+
+    // Check immediately
+    checkExpiry();
+    
+    // Check every second
+    const interval = setInterval(checkExpiry, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt, generateMutation]);
+
   const handleSelectEmail = useCallback((email: Email) => {
     setSelectedEmail(email);
     setShowMobilePreview(true);
@@ -116,9 +137,6 @@ export default function Home() {
   if (!currentEmail && generateMutation.isPending) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="fixed top-4 left-4 z-50">
-          <ThemeToggle />
-        </div>
         <HeaderSkeleton />
         <div className="flex h-[calc(100vh-180px)]">
           <div className="w-full md:w-96 border-l border-border">
@@ -134,9 +152,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      <div className="fixed top-4 left-4 z-50">
-        <ThemeToggle />
-      </div>
 
       <EmailHeader
         email={currentEmail}

@@ -15,11 +15,11 @@ interface EmailPreviewProps {
 export function EmailPreview({ email, onBack, showBackButton }: EmailPreviewProps) {
   if (!email) {
     return (
-      <div className="flex flex-col items-center justify-center h-full p-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-          <ArrowLeft className="w-8 h-8 text-muted-foreground" />
+      <div className="flex flex-col items-center justify-center h-full p-8 text-center bg-gradient-to-b from-blue-50/50 to-transparent">
+        <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center mb-6 border border-blue-200/50">
+          <ArrowLeft className="w-10 h-10 text-blue-400" />
         </div>
-        <h3 className="text-lg font-medium mb-2" data-testid="text-no-email-title">ایمیلی انتخاب نشده</h3>
+        <h3 className="text-xl font-bold mb-2 text-foreground" data-testid="text-no-email-title">ایمیلی انتخاب نشده</h3>
         <p className="text-sm text-muted-foreground max-w-xs" data-testid="text-no-email-description">
           برای مشاهده محتوای ایمیل، یکی از ایمیل‌های لیست سمت راست را انتخاب کنید
         </p>
@@ -28,14 +28,14 @@ export function EmailPreview({ email, onBack, showBackButton }: EmailPreviewProp
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="p-4 md:p-6 border-b border-border">
+    <div className="flex flex-col h-full bg-gradient-to-b from-background to-blue-50/30">
+      <div className="p-4 md:p-6 border-b border-border/50 bg-white/50 backdrop-blur-sm">
         {showBackButton && (
           <Button
             variant="ghost"
             size="sm"
             onClick={onBack}
-            className="mb-4 gap-2"
+            className="mb-4 gap-2 hover:bg-blue-100/50"
             data-testid="button-back"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -44,19 +44,19 @@ export function EmailPreview({ email, onBack, showBackButton }: EmailPreviewProp
         )}
 
         <h2
-          className="text-xl font-semibold mb-4"
+          className="text-2xl font-bold mb-4 text-foreground"
           data-testid="text-email-subject"
         >
           {email.subject || "(بدون موضوع)"}
         </h2>
 
         <div className="flex flex-col gap-3">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="w-5 h-5 text-primary" />
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-50/50 border border-blue-100/50">
+            <div className="w-11 h-11 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+              <User className="w-6 h-6 text-white" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-medium" data-testid="text-sender-name">
+              <p className="font-semibold text-foreground" data-testid="text-sender-name">
                 {email.fromName || "فرستنده ناشناس"}
               </p>
               <p
@@ -69,8 +69,8 @@ export function EmailPreview({ email, onBack, showBackButton }: EmailPreviewProp
             </div>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Calendar className="w-4 h-4" />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground px-3 py-2">
+            <Calendar className="w-4 h-4 text-blue-600" />
             <span data-testid="text-email-date">
               {format(new Date(email.receivedAt), "d MMMM yyyy، HH:mm", {
                 locale: faIR,

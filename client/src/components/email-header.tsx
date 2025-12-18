@@ -67,36 +67,38 @@ export function EmailHeader({
   };
 
   return (
-    <div className="bg-card border-b border-card-border">
-      <div className="p-4 md:p-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 rounded-md bg-primary/10">
-                <Mail className="w-5 h-5 text-primary" />
+    <div className="bg-gradient-to-br from-blue-600 to-blue-700 border-b border-blue-700/50">
+      <div className="p-4 md:p-5">
+        <div className="space-y-3">
+          {/* Header Row: Title and Timer */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-start gap-2">
+              <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm border border-white/30 flex-shrink-0">
+                <Mail className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold" data-testid="text-app-title">ایمیل موقت</h1>
-                <p className="text-sm text-muted-foreground" data-testid="text-app-description">
+                <h1 className="text-xl font-bold text-white leading-tight" data-testid="text-app-title">
+                  ایمیل موقت
+                </h1>
+                <p className="text-blue-100 text-xs mt-0.5" data-testid="text-app-description">
                   ایمیل یک‌بار مصرف برای حفظ حریم خصوصی
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {timeRemaining && (
-                <Badge variant="secondary" className="gap-1">
-                  <Clock className="w-3 h-3" />
-                  <span data-testid="text-timer">{timeRemaining}</span>
-                </Badge>
-              )}
-            </div>
+            {timeRemaining && (
+              <Badge className="gap-1.5 bg-white/25 backdrop-blur-sm text-white border border-white/40 hover:bg-white/35 flex-shrink-0 px-3 py-1 rounded-lg">
+                <Clock className="w-3 h-3" />
+                <span data-testid="text-timer" className="font-mono font-bold text-xs">{timeRemaining}</span>
+              </Badge>
+            )}
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex-1 flex items-center gap-2 bg-muted/50 rounded-md p-3 border border-border">
+          {/* Email Row */}
+          <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2">
+            <div className="flex-1 flex items-center gap-2 bg-white/15 backdrop-blur-md rounded-lg px-3 py-3 border border-white/30 hover:bg-white/20 transition-all duration-200">
               <span
-                className="flex-1 font-mono text-base md:text-lg select-all truncate"
+                className="flex-1 font-mono text-sm select-all truncate text-white"
                 dir="ltr"
                 data-testid="text-email-address"
               >
@@ -109,38 +111,26 @@ export function EmailHeader({
                 disabled={!email}
                 data-testid="button-copy-email"
                 aria-label="کپی کردن ایمیل"
+                className="text-white hover:bg-white/30 flex-shrink-0 h-8 w-8"
               >
                 {copied ? (
-                  <Check className="w-4 h-4 text-green-500" />
+                  <Check className="w-4 h-4 text-green-300" />
                 ) : (
                   <Copy className="w-4 h-4" />
                 )}
               </Button>
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={onRefresh}
-                disabled={isRefreshing || !email}
-                data-testid="button-refresh"
-                className="gap-2"
-              >
-                <RefreshCw
-                  className={`w-4 h-4 ${isRefreshing ? "animate-spin" : ""}`}
-                />
-                <span className="hidden sm:inline">بررسی ایمیل</span>
-              </Button>
-              <Button
-                onClick={onGenerate}
-                disabled={isLoading}
-                data-testid="button-generate"
-                className="gap-2"
-              >
-                <Mail className="w-4 h-4" />
-                <span>ایمیل جدید</span>
-              </Button>
-            </div>
+            <Button
+              onClick={onGenerate}
+              disabled={isLoading}
+              data-testid="button-generate"
+              className="gap-1.5 bg-white text-blue-700 hover:bg-blue-50 font-semibold shadow-lg hover:shadow-xl transition-all py-3 px-4 rounded-lg md:flex-shrink-0"
+              size="sm"
+            >
+              <Mail className="w-4 h-4" />
+              <span>ایمیل جدید</span>
+            </Button>
           </div>
         </div>
       </div>
