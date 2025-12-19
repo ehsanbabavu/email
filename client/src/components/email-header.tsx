@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Copy, Check, RefreshCw, Mail, Clock } from "lucide-react";
+import { Copy, Check, RefreshCw, Mail, Clock, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -11,6 +11,7 @@ interface EmailHeaderProps {
   onGenerate: () => void;
   isLoading: boolean;
   isRefreshing: boolean;
+  onSendEmail?: () => void;
 }
 
 export function EmailHeader({
@@ -20,6 +21,7 @@ export function EmailHeader({
   onGenerate,
   isLoading,
   isRefreshing,
+  onSendEmail,
 }: EmailHeaderProps) {
   const [copied, setCopied] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState("");
@@ -120,6 +122,17 @@ export function EmailHeader({
                 )}
               </Button>
             </div>
+
+            <Button
+              onClick={onSendEmail}
+              disabled={!email}
+              className="gap-1.5 bg-green-500 text-white hover:bg-green-600 font-semibold shadow-lg hover:shadow-xl transition-all py-3 px-4 rounded-lg md:flex-shrink-0"
+              size="sm"
+              aria-label="ارسال ایمیل تست"
+            >
+              <Send className="w-4 h-4" />
+              <span className="hidden sm:inline">ارسال ایمیل</span>
+            </Button>
 
             <Button
               onClick={onGenerate}

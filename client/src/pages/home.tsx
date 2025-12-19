@@ -5,6 +5,7 @@ import { EmailHeader } from "@/components/email-header";
 import { InboxList } from "@/components/inbox-list";
 import { EmailPreview } from "@/components/email-preview";
 import { EmptyInbox } from "@/components/empty-inbox";
+import { SendEmailDialog } from "@/components/send-email-dialog";
 import {
   HeaderSkeleton,
   EmailListSkeleton,
@@ -19,6 +20,7 @@ export default function Home() {
   const [currentEmail, setCurrentEmail] = useState<string>("");
   const [expiresAt, setExpiresAt] = useState<string>("");
   const [showMobilePreview, setShowMobilePreview] = useState(false);
+  const [showSendDialog, setShowSendDialog] = useState(false);
   const { toast } = useToast();
 
   const { data: inbox, isLoading: isLoadingInbox, refetch: refetchInbox, isFetching } = useQuery<Inbox>({
@@ -160,6 +162,15 @@ export default function Home() {
         onGenerate={handleGenerate}
         isLoading={generateMutation.isPending}
         isRefreshing={isFetching}
+        onSendEmail={() => setShowSendDialog(true)}
+      />
+
+      <SendEmailDialog
+        open={showSendDialog}
+        onOpenChange={setShowSendDialog}
+        recipientEmail={currentEmail}
+        senderEmail={currentEmail}
+        onEmailSent={handleRefresh}
       />
 
       <div className="flex-1 flex overflow-hidden">
